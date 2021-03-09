@@ -120,13 +120,6 @@ To install from GitHub
     install.packages("devtools")
     devtools::install_github("poissonconsulting/tmbr")
 
-or the Poisson [drat](https://github.com/poissonconsulting/drat)
-repository
-
-    install.packages("drat")
-    drat::addRepo("poissonconsulting")
-    install.packages("tmbr")
-
 ## Citation
 
 
