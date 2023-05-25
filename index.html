@@ -67,6 +67,7 @@
   <div class="contents col-md-9">
 
 
+<!-- badges: end -->
 <div class="section level1">
 <div class="page-header"><h1 id="tmbr">tmbr<a class="anchor" aria-label="anchor" href="#tmbr"></a>
 </h1></div>
@@ -79,113 +80,114 @@
 <h2 id="demonstration">Demonstration<a class="anchor" aria-label="anchor" href="#demonstration"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://magrittr.tidyverse.org" class="external-link">magrittr</a></span><span class="op">)</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span>
-<span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/poissonconsulting/tmbr" class="external-link">tmbr</a></span><span class="op">)</span>
-<span class="co">#&gt; Warning: replacing previous import 'extras::as_list' by 'rlang::as_list' when</span>
-<span class="co">#&gt; loading 'tmbr'</span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://magrittr.tidyverse.org" class="external-link">magrittr</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/poissonconsulting/mbr" class="external-link">mbr</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/poissonconsulting/tmbr" class="external-link">tmbr</a></span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">model</span><span class="op">(</span><span class="st">"#include &lt;TMB.hpp&gt;
-
-template&lt;class Type&gt;
-Type objective_function&lt;Type&gt;::operator() () {
-
-DATA_VECTOR(Pairs);
-DATA_VECTOR(Year);
-DATA_FACTOR(Annual);
-DATA_INTEGER(nAnnual);
-
-PARAMETER(alpha);
-PARAMETER(beta1);
-PARAMETER(beta2);
-PARAMETER(beta3);
-PARAMETER_VECTOR(bAnnual);
-PARAMETER(log_sAnnual);
-
-Type sAnnual = exp(log_sAnnual);
-
-vector&lt;Type&gt; ePairs = Pairs;
-
-Type nll = 0.0;
-
-for(int i = 0; i &lt; nAnnual; i++){
-  nll -= dnorm(bAnnual(i), Type(0), sAnnual, true);
-}
-
-for(int i = 0; i &lt; Pairs.size(); i++){
-  ePairs(i) = exp(alpha + beta1 * Year(i) + beta2 * pow(Year(i), 2) + beta3 * pow(Year(i), 3) + bAnnual(Annual(i)));
-  nll -= dpois(Pairs(i), ePairs(i), true);
-}
-ADREPORT(sAnnual)
-return nll;
-}"</span><span class="op">)</span>
-
-<span class="co"># add R code to calculate derived parameters</span>
-<span class="va">model</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/compound.html" class="external-link">%&lt;&gt;%</a></span> <span class="fu">update_model</span><span class="op">(</span>new_expr <span class="op">=</span> <span class="st">"
-for (i in 1:length(Pairs)) {
-  log(prediction[i]) &lt;- alpha + beta1 * Year[i] + beta2 * Year[i]^2 + beta3 * Year[i]^3 + bAnnual[Annual[i]]
-}"</span><span class="op">)</span>
-
-<span class="co"># define data types and center year</span>
-<span class="va">model</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/compound.html" class="external-link">%&lt;&gt;%</a></span> <span class="fu">update_model</span><span class="op">(</span>
-  gen_inits <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>alpha <span class="op">=</span> <span class="fl">4</span>, beta1 <span class="op">=</span> <span class="fl">1</span>, beta2 <span class="op">=</span> <span class="fl">0</span>, beta3 <span class="op">=</span> <span class="fl">0</span>, log_sAnnual <span class="op">=</span> <span class="fl">0</span>, bAnnual <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">data</span><span class="op">$</span><span class="va">nAnnual</span><span class="op">)</span><span class="op">)</span>,
-  select_data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"Pairs"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Year*"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, Annual <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,
-  random_effects <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>bAnnual <span class="op">=</span> <span class="st">"Annual"</span><span class="op">)</span><span class="op">)</span>
-
-<span class="va">data</span> <span class="op">&lt;-</span> <span class="fu">bauw</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/bauw/man/peregrine.html" class="external-link">peregrine</a></span>
-<span class="va">data</span><span class="op">$</span><span class="va">Annual</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">Year</span><span class="op">)</span>
-
-<span class="va">analysis</span> <span class="op">&lt;-</span> <span class="fu">analyse</span><span class="op">(</span><span class="va">model</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span>
-<span class="co">#&gt; Warning: The `simplify` argument of `coef()` must be TRUE as of mcmcr 0.4.1.</span>
-<span class="co">#&gt; # A tibble: 1 x 5</span>
-<span class="co">#&gt;       n     K logLik    IC converged</span>
-<span class="co">#&gt;   &lt;int&gt; &lt;int&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;lgl&gt;    </span>
-<span class="co">#&gt; 1    40     5  -154.  321. TRUE     </span>
-<span class="co">#&gt; Warning: 4 external pointers will be removed</span>
-
-<span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">)</span>
-<span class="co">#&gt; # A tibble: 5 x 7</span>
-<span class="co">#&gt;   term        estimate     sd  zscore   lower   upper   pvalue</span>
-<span class="co">#&gt;   &lt;term&gt;         &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;</span>
-<span class="co">#&gt; 1 alpha         4.26   0.0379 112.     4.19    4.34   0.      </span>
-<span class="co">#&gt; 2 beta1         1.19   0.0697  17.1    1.05    1.33   2.10e-65</span>
-<span class="co">#&gt; 3 beta2        -0.0177 0.0289  -0.611 -0.0743  0.0390 5.41e- 1</span>
-<span class="co">#&gt; 4 beta3        -0.272  0.0357  -7.62  -0.342  -0.202  2.63e-14</span>
-<span class="co">#&gt; 5 log_sAnnual  -2.31   0.271   -8.53  -2.84   -1.78   1.45e-17</span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/mbr/man/model.html" class="external-link">model</a></span><span class="op">(</span><span class="st">"#include &lt;TMB.hpp&gt;</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">template&lt;class Type&gt;</span></span>
+<span><span class="st">Type objective_function&lt;Type&gt;::operator() () {</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">DATA_VECTOR(Pairs);</span></span>
+<span><span class="st">DATA_VECTOR(Year);</span></span>
+<span><span class="st">DATA_FACTOR(Annual);</span></span>
+<span><span class="st">DATA_INTEGER(nAnnual);</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">PARAMETER(alpha);</span></span>
+<span><span class="st">PARAMETER(beta1);</span></span>
+<span><span class="st">PARAMETER(beta2);</span></span>
+<span><span class="st">PARAMETER(beta3);</span></span>
+<span><span class="st">PARAMETER_VECTOR(bAnnual);</span></span>
+<span><span class="st">PARAMETER(log_sAnnual);</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">Type sAnnual = exp(log_sAnnual);</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">vector&lt;Type&gt; ePairs = Pairs;</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">Type nll = 0.0;</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">for(int i = 0; i &lt; nAnnual; i++){</span></span>
+<span><span class="st">  nll -= dnorm(bAnnual(i), Type(0), sAnnual, true);</span></span>
+<span><span class="st">}</span></span>
+<span><span class="st"></span></span>
+<span><span class="st">for(int i = 0; i &lt; Pairs.size(); i++){</span></span>
+<span><span class="st">  ePairs(i) = exp(alpha + beta1 * Year(i) + beta2 * pow(Year(i), 2) + beta3 * pow(Year(i), 3) + bAnnual(Annual(i)));</span></span>
+<span><span class="st">  nll -= dpois(Pairs(i), ePairs(i), true);</span></span>
+<span><span class="st">}</span></span>
+<span><span class="st">ADREPORT(sAnnual)</span></span>
+<span><span class="st">return nll;</span></span>
+<span><span class="st">}"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># add R code to calculate derived parameters</span></span>
+<span><span class="va">model</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/compound.html" class="external-link">%&lt;&gt;%</a></span> <span class="fu"><a href="https://rdrr.io/pkg/mbr/man/update_model.html" class="external-link">update_model</a></span><span class="op">(</span>new_expr <span class="op">=</span> <span class="st">"</span></span>
+<span><span class="st">for (i in 1:length(Pairs)) {</span></span>
+<span><span class="st">  log(prediction[i]) &lt;- alpha + beta1 * Year[i] + beta2 * Year[i]^2 + beta3 * Year[i]^3 + bAnnual[Annual[i]]</span></span>
+<span><span class="st">}"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># define data types and center year</span></span>
+<span><span class="va">model</span> <span class="op"><a href="https://magrittr.tidyverse.org/reference/compound.html" class="external-link">%&lt;&gt;%</a></span> <span class="fu"><a href="https://rdrr.io/pkg/mbr/man/update_model.html" class="external-link">update_model</a></span><span class="op">(</span></span>
+<span>  gen_inits <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>alpha <span class="op">=</span> <span class="fl">4</span>, beta1 <span class="op">=</span> <span class="fl">1</span>, beta2 <span class="op">=</span> <span class="fl">0</span>, beta3 <span class="op">=</span> <span class="fl">0</span>, log_sAnnual <span class="op">=</span> <span class="fl">0</span>, bAnnual <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="va">data</span><span class="op">$</span><span class="va">nAnnual</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  select_data <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"Pairs"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"Year*"</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">integer</a></span><span class="op">(</span><span class="op">)</span>, Annual <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  random_effects <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>bAnnual <span class="op">=</span> <span class="st">"Annual"</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu">bauw</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/bauw/man/peregrine.html" class="external-link">peregrine</a></span></span>
+<span><span class="va">data</span><span class="op">$</span><span class="va">Annual</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/factor.html" class="external-link">factor</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">Year</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">analysis</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/mbr/man/analyse.html" class="external-link">analyse</a></span><span class="op">(</span><span class="va">model</span>, data <span class="op">=</span> <span class="va">data</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Note: Using Makevars in /Users/joe/.R/Makevars</span></span>
+<span><span class="co">#&gt; using C++ compiler: 'Apple clang version 14.0.3 (clang-1403.0.22.14.1)'</span></span>
+<span><span class="co">#&gt; using SDK: ''</span></span>
+<span><span class="co">#&gt; # A tibble: 1 × 5</span></span>
+<span><span class="co">#&gt;       n     K logLik    IC converged</span></span>
+<span><span class="co">#&gt;   &lt;int&gt; &lt;int&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;lgl&gt;    </span></span>
+<span><span class="co">#&gt; 1    40     5  -154.  321. TRUE     </span></span>
+<span><span class="co">#&gt; Warning: 4 external pointers will be removed</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">analysis</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # A tibble: 5 × 8</span></span>
+<span><span class="co">#&gt;   term        estimate   lower   upper svalue     sd  zscore   pvalue</span></span>
+<span><span class="co">#&gt;   &lt;term&gt;         &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt; 1 alpha         4.26    4.19    4.34        1 0.0379 112.    0       </span></span>
+<span><span class="co">#&gt; 2 beta1         1.19    1.05    1.33        1 0.0697  17.1   2.10e-65</span></span>
+<span><span class="co">#&gt; 3 beta2        -0.0177 -0.0743  0.0390      1 0.0289  -0.611 5.41e- 1</span></span>
+<span><span class="co">#&gt; 4 beta3        -0.272  -0.342  -0.202       1 0.0357  -7.62  2.63e-14</span></span>
+<span><span class="co">#&gt; 5 log_sAnnual  -2.31   -2.84   -1.78        1 0.271   -8.53  1.45e-17</span></span></code></pre></div>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span class="va">year</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">analysis</span>, new_data <span class="op">=</span> <span class="st">"Year"</span><span class="op">)</span>
-
-<span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">year</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Year</span>, y <span class="op">=</span> <span class="va">estimate</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span>
-  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu">bauw</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/bauw/man/peregrine.html" class="external-link">peregrine</a></span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">Pairs</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span>
-  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span>
-  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/expand_limits.html" class="external-link">expand_limits</a></span><span class="op">(</span>y <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">year</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">analysis</span>, new_data <span class="op">=</span> <span class="st">"Year"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">year</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">Year</span>, y <span class="op">=</span> <span class="va">estimate</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_point.html" class="external-link">geom_point</a></span><span class="op">(</span>data <span class="op">=</span> <span class="fu">bauw</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/bauw/man/peregrine.html" class="external-link">peregrine</a></span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">Pairs</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/geom_path.html" class="external-link">geom_line</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span></span>
+<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/expand_limits.html" class="external-link">expand_limits</a></span><span class="op">(</span>y <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></code></pre></div>
 <p><img src="tools/README-unnamed-chunk-4-1.png"><!-- --></p>
 </div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
 <p>To install from GitHub</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1"></a><span class="kw">install.packages</span>(<span class="st">"devtools"</span>)</span>
-<span id="cb4-2"><a href="#cb4-2"></a>devtools<span class="op">::</span><span class="kw">install_github</span>(<span class="st">"poissonconsulting/tmbr"</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">install.packages</span>(<span class="st">"devtools"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">install_github</span>(<span class="st">"poissonconsulting/tmbr"</span>)</span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="citation">Citation<a class="anchor" aria-label="anchor" href="#citation"></a>
 </h2>
-<div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1"></a>To cite tmbr <span class="cf">in</span> publications use<span class="op">:</span></span>
-<span id="cb5-2"><a href="#cb5-2"></a></span>
-<span id="cb5-3"><a href="#cb5-3"></a><span class="st">  </span>Joe <span class="kw">Thorley</span> (<span class="dv">2018</span>) tmbr<span class="op">:</span><span class="st"> </span>Analyses Using TMB. doi<span class="op">:</span></span>
-<span id="cb5-4"><a href="#cb5-4"></a><span class="st">  </span>https<span class="op">:</span><span class="er">//</span>doi.org<span class="op">/</span><span class="fl">10.5281</span><span class="op">/</span>zenodo.<span class="fl">1162374.</span></span>
-<span id="cb5-5"><a href="#cb5-5"></a></span>
-<span id="cb5-6"><a href="#cb5-6"></a>A BibTeX entry <span class="cf">for</span> LaTeX users is</span>
-<span id="cb5-7"><a href="#cb5-7"></a></span>
-<span id="cb5-8"><a href="#cb5-8"></a>  <span class="op">@</span>Misc{,</span>
-<span id="cb5-9"><a href="#cb5-9"></a>    author =<span class="st"> </span>{Joe Thorley},</span>
-<span id="cb5-10"><a href="#cb5-10"></a>    year =<span class="st"> </span>{<span class="dv">2018</span>},</span>
-<span id="cb5-11"><a href="#cb5-11"></a>    title =<span class="st"> </span>{tmbr<span class="op">:</span><span class="st"> </span>Analyses Using TMB},</span>
-<span id="cb5-12"><a href="#cb5-12"></a>    doi =<span class="st"> </span>{https<span class="op">:</span><span class="er">//</span>doi.org<span class="op">/</span><span class="fl">10.5281</span><span class="op">/</span>zenodo<span class="fl">.1162374</span>},</span>
-<span id="cb5-13"><a href="#cb5-13"></a>  }</span>
-<span id="cb5-14"><a href="#cb5-14"></a></span>
-<span id="cb5-15"><a href="#cb5-15"></a>Please also cite TMB.</span></code></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>To cite tmbr <span class="cf">in</span> publications use<span class="sc">:</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  Joe <span class="fu">Thorley</span> (<span class="dv">2018</span>) tmbr<span class="sc">:</span> Analyses Using TMB. doi<span class="sc">:</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  https<span class="sc">:</span><span class="er">//</span>doi.org<span class="sc">/</span><span class="fl">10.5281</span><span class="sc">/</span>zenodo.<span class="fl">1162374.</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>A BibTeX entry <span class="cf">for</span> LaTeX users is</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="sc">@</span>Misc{,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    author <span class="ot">=</span> {Joe Thorley},</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    year <span class="ot">=</span> {<span class="dv">2018</span>},</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    title <span class="ot">=</span> {tmbr<span class="sc">:</span> Analyses Using TMB},</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    doi <span class="ot">=</span> {https<span class="sc">:</span><span class="er">//</span>doi.org<span class="sc">/</span><span class="fl">10.5281</span><span class="sc">/</span>zenodo<span class="fl">.1162374</span>},</span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>Please also cite TMB.</span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="contribution">Contribution<a class="anchor" aria-label="anchor" href="#contribution"></a>
@@ -224,13 +226,14 @@ for (i in 1:length(Pairs)) {
 <ul class="list-unstyled">
 <li><a href="CONTRIBUTING.html">Contributing guide</a></li>
 <li><a href="CODE_OF_CONDUCT.html">Code of conduct</a></li>
+<li><a href="SUPPORT.html">Getting help</a></li>
 </ul>
 </div>
 
 <div class="citation">
 <h2 data-toc-skip>Citation</h2>
 <ul class="list-unstyled">
-<li><a href="authors.html">Citing tmbr</a></li>
+<li><a href="authors.html#citation">Citing tmbr</a></li>
 </ul>
 </div>
 
@@ -245,7 +248,7 @@ for (i in 1:length(Pairs)) {
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#stable" class="external-link"><img src="https://img.shields.io/badge/lifecycle-stable-brightgreen.svg" alt="Lifecycle: stable"></a></li>
-<li><a href="https://github.com/poissonconsulting/tmbr/actions" class="external-link"><img src="https://github.com/poissonconsulting/tmbr/workflows/R-CMD-check/badge.svg" alt="R build status"></a></li>
+<li><a href="https://github.com/poissonconsulting/tmbr/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/poissonconsulting/tmbr/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://codecov.io/gh/poissonconsulting/tmbr?branch=master" class="external-link"><img src="https://codecov.io/gh/poissonconsulting/tmbr/branch/master/graph/badge.svg" alt="Codecov test coverage"></a></li>
 <li><a href="https://opensource.org/licenses/MIT" class="external-link"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a></li>
 <li><a href="https://doi.org/10.5281/zenodo.1162374" class="external-link"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.1162374.svg" alt="DOI"></a></li>
@@ -263,7 +266,7 @@ for (i in 1:length(Pairs)) {
 
 <div class="pkgdown">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 1.9000.9000.9000.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
 </div>
 
       </footer>
